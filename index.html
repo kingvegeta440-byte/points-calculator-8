@@ -1,121 +1,92 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Tournament Points Table</title>
+  <meta charset="UTF-8" />
+  <title>BGMI Tournament Points Calculator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f7f7f7;
-      padding: 20px;
+    :root{
+      --bg:#f6f7fb; --card:#ffffff; --ink:#222; --muted:#666;
+      --brand:#2563eb; --brand-ink:#fff; --ok:#10b981; --warn:#ef4444;
+      --row:#f3f4f6; --row2:#eef2ff;
     }
-    .controls {
-      margin-bottom: 15px;
+    *{box-sizing:border-box}
+    body{margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; color:var(--ink); background:var(--bg);}
+    header{padding:22px 16px; text-align:center;}
+    header h1{margin:0 0 6px; font-size:24px;}
+    header .sub{color:var(--muted); font-size:14px;}
+    .wrap{max-width:1100px; margin:0 auto; padding:0 16px 40px;}
+    .card{background:var(--card); border-radius:14px; box-shadow:0 6px 20px rgba(0,0,0,.06); padding:16px;}
+    .row{display:flex; gap:12px; flex-wrap:wrap; align-items:center}
+    .teams-grid{display:grid; grid-template-columns:repeat(2,minmax(280px,1fr)); gap:12px;}
+    @media (max-width: 820px){ .teams-grid{grid-template-columns:1fr;} }
+    .team{background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:10px;}
+    .team h3{margin:0 0 6px; font-size:14px; color:var(--muted);}
+    .inputs{display:grid; grid-template-columns:1.2fr .8fr .8fr .9fr .7fr; gap:8px; align-items:center}
+    .inputs input[type="text"], .inputs input[type="number"]{
+      width:100%; padding:8px 10px; border:1px solid #e5e7eb; border-radius:8px; font-size:14px;
     }
-    .controls button {
-      margin-right: 10px;
-      padding: 8px 15px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      color: white;
-      font-weight: bold;
-    }
-    .generate { background: #2563eb; }
-    .add { background: #16a34a; }
-    .reset { background: #dc2626; }
-    .match-inputs {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
-      margin-bottom: 20px;
-    }
-    .match-inputs input {
-      padding: 5px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
-    .leaderboard {
-      background: white;
-      border-radius: 10px;
-      padding: 15px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    .leaderboard h2 {
-      margin: 0 0 10px;
-      display: flex;
-      align-items: center;
-    }
-    .leaderboard h2 span {
-      margin-right: 8px;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    th {
-      background: black;
-      color: white;
-      padding: 8px;
-      text-align: left;
-    }
-    td {
-      padding: 8px;
-      border-bottom: 1px solid #ddd;
-    }
-    tr:nth-child(even) {
-      background: #f9f9f9;
-    }
-    tr:nth-child(odd) {
-      background: #ffffff;
-    }
-    .rank {
-      font-weight: bold;
-    }
+    .bar{display:flex; gap:10px; flex-wrap:wrap; margin-top:12px}
+    .btn{border:0; border-radius:10px; padding:10px 14px; font-weight:600; cursor:pointer}
+    .btn.primary{background:var(--brand); color:var(--brand-ink)}
+    .btn.ghost{background:#e5e7eb}
+    .btn.ok{background:var(--ok); color:#fff}
+    .btn.warn{background:var(--warn); color:#fff}
+    .error{color:var(--warn); font-size:13px; margin:6px 0 0 2px}
+    .muted{color:var(--muted)}
+    table{width:100%; border-collapse:separate; border-spacing:0; overflow:hidden; border-radius:12px; background:#fff; margin-top:14px}
+    thead th{background:#111827; color:#fff; font-weight:600; font-size:14px; padding:10px}
+    tbody td{padding:10px; text-align:center; border-bottom:1px solid #f0f2f5; font-size:14px}
+    tbody tr:nth-child(odd){background:var(--row)}
+    tbody tr:nth-child(even){background:var(--row2)}
+    tbody tr:first-child td{font-weight:700}
+    .rank-badge{display:inline-block; min-width:30px; padding:2px 8px; border-radius:999px; background:#111827; color:#fff}
+    .top1{background:#f59e0b}
+    .top2{background:#9ca3af}
+    .top3{background:#b45309}
+    .panel{display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-top:16px}
+    .right{display:flex; gap:10px; align-items:center}
+    .select{padding:8px 10px; border:1px solid #e5e7eb; border-radius:8px; background:#fff}
   </style>
 </head>
 <body>
+<header>
+  <h1>BGMI Tournament Points Calculator</h1>
+  <div class="sub">Placement + Finishes (Impact optional) + Bounty (+10). Generate once, Add to totals if match done.</div>
+</header>
 
-  <div class="controls">
-    <button class="generate" onclick="generateTable()">🔵 Generate Points Table</button>
-    <button class="add" onclick="addMatch()">➕ Add Match</button>
-    <button class="reset" onclick="resetTournament()">🔴 Reset Tournament</button>
+<div class="wrap">
+  <div class="card">
+    <div class="panel">
+      <div class="row">
+        <label><input type="checkbox" id="enableImpact" /> Enable Impact Player (×2 per impact finish)</label>
+        <label><input type="checkbox" id="enableBounty" /> Enable Bounty Points (+10)</label>
+      </div>
+      <div class="right">
+        <label class="row muted">Teams:
+          <select id="teamCount" class="select">
+            <option value="24" selected>24</option>
+            <option value="16">16</option>
+          </select>
+        </label>
+        <button class="btn ghost" id="exportPng">Export Leaderboard PNG</button>
+      </div>
+    </div>
+
+    <div id="error" class="error"></div>
+    <div id="teams" class="teams-grid"></div>
+
+    <div class="bar">
+      <button class="btn primary" id="generateBtn">📊 Generate Points Table</button>
+      <button class="btn ok" id="addMatchBtn">➕ Add Match</button>
+      <button class="btn warn" id="resetBtn">♻ Reset Tournament</button>
+    </div>
+    <span class="muted">Tip: Enter moves to next field. Only “Add Match” saves to totals.</span>
   </div>
 
-  <div class="match-inputs" id="matchInputs">
-    <!-- Team Inputs -->
-    <input placeholder="Team name">
-    <input placeholder="Place">
-    <input placeholder="Finish">
-    <input placeholder="Team name">
-    <input placeholder="Place">
-    <input placeholder="Finish">
-    <input placeholder="Team name">
-    <input placeholder="Place">
-    <input placeholder="Finish">
-    <input placeholder="Team name">
-    <input placeholder="Place">
-    <input placeholder="Finish">
-    <input placeholder="Team name">
-    <input placeholder="Place">
-    <input placeholder="Finish">
-    <input placeholder="Team name">
-    <input placeholder="Place">
-    <input placeholder="Finish">
-    <input placeholder="Team name">
-    <input placeholder="Place">
-    <input placeholder="Finish">
-    <input placeholder="Team name">
-    <input placeholder="Place">
-    <input placeholder="Finish">
-    <input placeholder="Team name">
-    <input placeholder="Place">
-    <input placeholder="Finish">
-  </div>
-
-  <div class="leaderboard" id="leaderboard">
-    <h2>🏆 Leaderboard</h2>
-    <table>
+  <div class="card" id="leaderboardCard">
+    <h2 style="margin:0 0 10px">🏆 Leaderboard <span id="matchCount"></span></h2>
+    <table id="leaderboard">
       <thead>
         <tr>
           <th>Rank</th>
@@ -130,84 +101,186 @@
       <tbody id="leaderboardBody"></tbody>
     </table>
   </div>
+</div>
 
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" defer></script>
 <script>
-let teams = {};
-let matchCount = 0;
+(() => {
+  const DEFAULT_TEAMS = 24;
+  const IMPACT_MULTIPLIER = 2;
 
-// Placement points distribution
-const placementPoints = {
-  1: 10,
-  2: 6,
-  3: 5,
-  4: 4,
-  5: 3,
-  6: 2,
-  7: 1,
-  8: 1
-};
-
-function addMatch() {
-  matchCount++;
-  const inputs = document.querySelectorAll('#matchInputs input');
-  for (let i = 0; i < inputs.length; i += 3) {
-    let teamName = inputs[i].value.trim();
-    let place = parseInt(inputs[i+1].value.trim());
-    let finishes = parseInt(inputs[i+2].value.trim());
-    if (!teamName) continue;
-
-    if (!teams[teamName]) {
-      teams[teamName] = { matches: 0, wwcd: 0, placement: 0, kills: 0, total: 0 };
-    }
-    teams[teamName].matches++;
-    if (place === 1) teams[teamName].wwcd++;
-
-    let placementPts = placementPoints[place] || 0;
-    let killPts = finishes;
-
-    teams[teamName].placement += placementPts;
-    teams[teamName].kills += killPts;
-    teams[teamName].total += placementPts + killPts;
+  function placementPoints(p){
+    if(p===1) return 10;
+    if(p===2) return 6;
+    if(p===3) return 5;
+    if(p===4) return 4;
+    if(p===5) return 3;
+    if(p===6) return 2;
+    if(p===7) return 1;
+    return 0;
   }
 
-  // Clear inputs
-  inputs.forEach(inp => inp.value = '');
-}
+  let standings = JSON.parse(localStorage.getItem("standings")||"{}");
+  let canonicalNames = JSON.parse(localStorage.getItem("canonicalNames")||"{}");
+  let teamCount = parseInt(localStorage.getItem("teamCount")||DEFAULT_TEAMS,10);
+  let matchesPlayed = parseInt(localStorage.getItem("matchesPlayed")||"0",10);
 
-function generateTable() {
-  let leaderboard = Object.entries(teams).map(([name, stats]) => ({
-    team: name,
-    ...stats
-  }));
+  const els = {
+    enableImpact: document.getElementById("enableImpact"),
+    enableBounty: document.getElementById("enableBounty"),
+    teamCount: document.getElementById("teamCount"),
+    teamsWrap: document.getElementById("teams"),
+    error: document.getElementById("error"),
+    generateBtn: document.getElementById("generateBtn"),
+    addMatchBtn: document.getElementById("addMatchBtn"),
+    resetBtn: document.getElementById("resetBtn"),
+    exportPng: document.getElementById("exportPng"),
+    leaderboardBody: document.getElementById("leaderboardBody"),
+    matchCount: document.getElementById("matchCount")
+  };
 
-  // FIXED SORT: total desc → placement desc → kills desc
-  leaderboard.sort((a, b) => 
-    b.total - a.total || b.placement - a.placement || b.kills - a.kills
-  );
+  function buildInputs(){
+    els.teamsWrap.innerHTML="";
+    for(let i=1;i<=teamCount;i++){
+      const div=document.createElement("div");
+      div.className="team";
+      div.innerHTML=`
+        <h3>Team ${i}</h3>
+        <div class="inputs">
+          <input type="text" id="name${i}" placeholder="Team name" value="${canonicalNames[i]||""}"/>
+          <input type="number" id="placement${i}" placeholder="Place" min="1" max="${teamCount}"/>
+          <input type="number" id="finishes${i}" placeholder="Finishes" min="0"/>
+          <input type="number" id="impact${i}" placeholder="Impact" min="0" value="0" disabled/>
+          <label><input type="checkbox" id="bounty${i}" disabled/> Bounty</label>
+        </div>`;
+      els.teamsWrap.appendChild(div);
+    }
+    wireEnterAdvance();
+    updateImpactBountyInputs();
+  }
 
-  const tbody = document.getElementById('leaderboardBody');
-  tbody.innerHTML = '';
-  leaderboard.forEach((team, index) => {
-    tbody.innerHTML += `
-      <tr>
-        <td class="rank">${index+1}</td>
-        <td><b>${team.team}</b></td>
-        <td>${team.matches}</td>
-        <td>${team.wwcd}</td>
-        <td>${team.placement}</td>
-        <td>${team.kills}</td>
-        <td>${team.total}</td>
-      </tr>
-    `;
-  });
-}
+  function wireEnterAdvance(){
+    const inputs=els.teamsWrap.querySelectorAll("input");
+    inputs.forEach((el,idx)=>{
+      el.addEventListener("keydown",(e)=>{
+        if(e.key==="Enter"){e.preventDefault(); const nxt=inputs[idx+1]; if(nxt) nxt.focus();}
+      });
+    });
+  }
 
-function resetTournament() {
-  teams = {};
-  matchCount = 0;
-  document.getElementById('leaderboardBody').innerHTML = '';
-}
+  function updateImpactBountyInputs(){
+    const enableImpact=els.enableImpact.checked;
+    const enableBounty=els.enableBounty.checked;
+    for(let i=1;i<=teamCount;i++){
+      document.getElementById(`impact${i}`).disabled=!enableImpact;
+      document.getElementById(`bounty${i}`).disabled=!enableBounty;
+    }
+  }
+
+  function calculateCurrent(){
+    const enableImpact=els.enableImpact.checked;
+    const enableBounty=els.enableBounty.checked;
+    const result=[];
+    for(let i=1;i<=teamCount;i++){
+      let name=(document.getElementById(`name${i}`).value||`Team ${i}`).trim();
+      let placement=parseInt(document.getElementById(`placement${i}`).value||"0",10);
+      let fins=parseInt(document.getElementById(`finishes${i}`).value||"0",10);
+      let imp=parseInt(document.getElementById(`impact${i}`).value||"0",10);
+      let bounty=document.getElementById(`bounty${i}`).checked;
+      if(imp>fins) imp=fins;
+      let placementPts=placementPoints(placement);
+      let killPts=(fins-(enableImpact?imp:0))*1 + (enableImpact?imp*IMPACT_MULTIPLIER:0) + (enableBounty&&bounty?10:0);
+      let total=placementPts+killPts;
+      if(placement||fins||imp||bounty||name!==`Team ${i}`){
+        result.push({name,placementPts,killPts,total,placement});
+      }
+    }
+    return result;
+  }
+
+  function renderLeaderboard(data){
+    data.sort((a,b)=> 
+      b.total - a.total ||
+      b.placementPts - a.placementPts ||
+      b.killPts - a.killPts ||
+      (b.wwcd||0) - (a.wwcd||0) ||
+      a.name.localeCompare(b.name)
+    );
+    els.leaderboardBody.innerHTML=data.map((t,idx)=>{
+      let badge="rank-badge"; if(idx===0) badge+=" top1"; else if(idx===1) badge+=" top2"; else if(idx===2) badge+=" top3";
+      return `<tr>
+        <td><span class="${badge}">${idx+1}</span></td>
+        <td style="text-align:left">${t.name}</td>
+        <td>${t.matches||0}</td>
+        <td>${t.wwcd||0}</td>
+        <td>${t.placementPts}</td>
+        <td>${t.killPts}</td>
+        <td>${t.total}</td>
+      </tr>`;
+    }).join("");
+    els.matchCount.textContent = matchesPlayed>0?`(Matches: ${matchesPlayed})`:"";
+  }
+
+  function addMatch(){
+    const cur=calculateCurrent();
+    const taken=Object.keys(standings);
+    for(let i=1;i<=teamCount;i++){
+      let desired=(document.getElementById(`name${i}`).value||`Team ${i}`).trim();
+      if(!canonicalNames[i]){
+        let nm=desired;
+        let k=2;
+        while(taken.includes(nm)) nm=`${desired} (${k++})`;
+        canonicalNames[i]=nm;
+      }
+      let slot=canonicalNames[i];
+      const team=cur.find(t=>t.name===desired);
+      if(team){
+        if(!standings[slot]) standings[slot]={placementPts:0,killPts:0,total:0,matches:0,wwcd:0};
+        standings[slot].placementPts+=team.placementPts;
+        standings[slot].killPts+=team.killPts;
+        standings[slot].total+=team.total;
+        standings[slot].matches+=1;
+        if(team.placement===1) standings[slot].wwcd+=1;
+      }
+    }
+    matchesPlayed++;
+    persist();
+    renderLeaderboard(Object.entries(standings).map(([n,s])=>({name:n,...s})));
+  }
+
+  function resetTournament(){
+    if(!confirm("Reset tournament?")) return;
+    standings={}; canonicalNames={}; matchesPlayed=0;
+    persist(); buildInputs(); renderLeaderboard([]);
+  }
+
+  function persist(){
+    localStorage.setItem("standings",JSON.stringify(standings));
+    localStorage.setItem("canonicalNames",JSON.stringify(canonicalNames));
+    localStorage.setItem("teamCount",teamCount);
+    localStorage.setItem("matchesPlayed",matchesPlayed);
+  }
+
+  async function exportPng(){
+    const node=document.getElementById("leaderboardCard");
+    const canvas=await html2canvas(node,{scale:2,backgroundColor:"#fff"});
+    const a=document.createElement("a"); a.href=canvas.toDataURL("image/png"); a.download="bgmi_leaderboard.png"; a.click();
+  }
+
+  function init(){
+    els.teamCount.value=teamCount;
+    els.teamCount.addEventListener("change",()=>{teamCount=parseInt(els.teamCount.value,10); canonicalNames={}; persist(); buildInputs();});
+    els.enableImpact.addEventListener("change",updateImpactBountyInputs);
+    els.enableBounty.addEventListener("change",updateImpactBountyInputs);
+    buildInputs();
+    renderLeaderboard(Object.entries(standings).map(([n,s])=>({name:n,...s})));
+    els.generateBtn.addEventListener("click",()=>{renderLeaderboard(calculateCurrent());});
+    els.addMatchBtn.addEventListener("click",addMatch);
+    els.resetBtn.addEventListener("click",resetTournament);
+    els.exportPng.addEventListener("click",exportPng);
+  }
+  init();
+})();
 </script>
-
 </body>
 </html>
