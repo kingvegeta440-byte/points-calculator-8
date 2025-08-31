@@ -2,128 +2,212 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tournament Leaderboard</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <title>Tournament Points Table</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f7f7f7;
+      padding: 20px;
+    }
+    .controls {
+      margin-bottom: 15px;
+    }
+    .controls button {
+      margin-right: 10px;
+      padding: 8px 15px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      color: white;
+      font-weight: bold;
+    }
+    .generate { background: #2563eb; }
+    .add { background: #16a34a; }
+    .reset { background: #dc2626; }
+    .match-inputs {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .match-inputs input {
+      padding: 5px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .leaderboard {
+      background: white;
+      border-radius: 10px;
+      padding: 15px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .leaderboard h2 {
+      margin: 0 0 10px;
+      display: flex;
+      align-items: center;
+    }
+    .leaderboard h2 span {
+      margin-right: 8px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th {
+      background: black;
+      color: white;
+      padding: 8px;
+      text-align: left;
+    }
+    td {
+      padding: 8px;
+      border-bottom: 1px solid #ddd;
+    }
+    tr:nth-child(even) {
+      background: #f9f9f9;
+    }
+    tr:nth-child(odd) {
+      background: #ffffff;
+    }
+    .rank {
+      font-weight: bold;
+    }
+  </style>
 </head>
-<body class="bg-gray-100 p-4">
-  <div class="max-w-6xl mx-auto">
-    <div class="flex flex-wrap gap-2 mb-4 items-center">
-      <button onclick="generateTable()" class="bg-blue-600 text-white px-3 py-2 rounded">🔄 Generate Points Table</button>
-      <button onclick="addMatch()" class="bg-green-600 text-white px-3 py-2 rounded">➕ Add Match</button>
-      <button onclick="resetAll()" class="bg-red-600 text-white px-3 py-2 rounded">⛔ Reset Tournament</button>
-    </div>
-    
-    <div id="teamsContainer" class="grid grid-cols-2 gap-2 mb-4"></div>
-    
-    <div id="leaderboardCard" class="bg-white rounded-2xl shadow p-4">
-      <h2 class="text-xl font-bold mb-2">🏆 Leaderboard</h2>
-      <div id="leaderboard"></div>
-    </div>
+<body>
+
+  <div class="controls">
+    <button class="generate" onclick="generateTable()">🔵 Generate Points Table</button>
+    <button class="add" onclick="addMatch()">➕ Add Match</button>
+    <button class="reset" onclick="resetTournament()">🔴 Reset Tournament</button>
+  </div>
+
+  <div class="match-inputs" id="matchInputs">
+    <!-- Team Inputs -->
+    <input placeholder="Team name">
+    <input placeholder="Place">
+    <input placeholder="Finish">
+    <input placeholder="Team name">
+    <input placeholder="Place">
+    <input placeholder="Finish">
+    <input placeholder="Team name">
+    <input placeholder="Place">
+    <input placeholder="Finish">
+    <input placeholder="Team name">
+    <input placeholder="Place">
+    <input placeholder="Finish">
+    <input placeholder="Team name">
+    <input placeholder="Place">
+    <input placeholder="Finish">
+    <input placeholder="Team name">
+    <input placeholder="Place">
+    <input placeholder="Finish">
+    <input placeholder="Team name">
+    <input placeholder="Place">
+    <input placeholder="Finish">
+    <input placeholder="Team name">
+    <input placeholder="Place">
+    <input placeholder="Finish">
+    <input placeholder="Team name">
+    <input placeholder="Place">
+    <input placeholder="Finish">
+  </div>
+
+  <div class="leaderboard" id="leaderboard">
+    <h2>🏆 Leaderboard</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Rank</th>
+          <th>Team</th>
+          <th>Matches</th>
+          <th>WWCD</th>
+          <th>Placement Pts</th>
+          <th>Kill Pts</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody id="leaderboardBody"></tbody>
+    </table>
   </div>
 
 <script>
-let teams = JSON.parse(localStorage.getItem("standings")) || {};
-let matches = parseInt(localStorage.getItem("matches")) || 0;
+let teams = {};
+let matchCount = 0;
 
-const placementPoints = [10,6,5,4,3,2,1,1]; // 1st–8th placement
-function getPlacementPts(place){
-  if(place>=1 && place<=8) return placementPoints[place-1];
-  return 0;
-}
+// Placement points distribution
+const placementPoints = {
+  1: 10,
+  2: 6,
+  3: 5,
+  4: 4,
+  5: 3,
+  6: 2,
+  7: 1,
+  8: 1
+};
 
-function renderInputs(){
-  const container=document.getElementById("teamsContainer");
-  container.innerHTML="";
-  let teamCount = parseInt(localStorage.getItem("teamCount")) || 16;
-  for(let i=0;i<teamCount;i++){
-    let div=document.createElement("div");
-    div.className="flex gap-1 items-center";
-    div.innerHTML=`
-      <input placeholder="Team name" class="teamName border p-1 rounded w-24"
-             value="${localStorage.getItem("teamName"+i)||""}">
-      <input type="number" placeholder="Place" class="place border p-1 rounded w-16">
-      <input type="number" placeholder="Finish" class="finish border p-1 rounded w-16">
-    `;
-    container.appendChild(div);
+function addMatch() {
+  matchCount++;
+  const inputs = document.querySelectorAll('#matchInputs input');
+  for (let i = 0; i < inputs.length; i += 3) {
+    let teamName = inputs[i].value.trim();
+    let place = parseInt(inputs[i+1].value.trim());
+    let finishes = parseInt(inputs[i+2].value.trim());
+    if (!teamName) continue;
+
+    if (!teams[teamName]) {
+      teams[teamName] = { matches: 0, wwcd: 0, placement: 0, kills: 0, total: 0 };
+    }
+    teams[teamName].matches++;
+    if (place === 1) teams[teamName].wwcd++;
+
+    let placementPts = placementPoints[place] || 0;
+    let killPts = finishes;
+
+    teams[teamName].placement += placementPts;
+    teams[teamName].kills += killPts;
+    teams[teamName].total += placementPts + killPts;
   }
+
+  // Clear inputs
+  inputs.forEach(inp => inp.value = '');
 }
 
-function addMatch(){
-  matches++;
-  document.getElementById("teamsContainer").querySelectorAll("div").forEach(div=>{
-    let name=div.querySelector(".teamName").value.trim();
-    let placement=parseInt(div.querySelector(".place").value)||0;
-    let fins=parseInt(div.querySelector(".finish").value)||0;
-    if(!name) return;
-    localStorage.setItem("teamName"+name,name);
-    
-    if(!teams[name]) teams[name]={matches:0,wwcd:0,placementPts:0,killPts:0,total:0};
-    teams[name].matches++;
-    if(placement===1) teams[name].wwcd++;
-    teams[name].placementPts += getPlacementPts(placement);
-    teams[name].killPts += fins;
-    teams[name].total = Number(teams[name].placementPts) + Number(teams[name].killPts);
-  });
-  localStorage.setItem("standings",JSON.stringify(teams));
-  localStorage.setItem("matches",matches);
-  renderLeaderboard();
-}
-
-function renderLeaderboard(){
-  let data=Object.entries(teams).map(([name,stats])=>({
-    name,
-    matches: Number(stats.matches),
-    wwcd: Number(stats.wwcd),
-    placementPts: Number(stats.placementPts),
-    killPts: Number(stats.killPts),
-    total: Number(stats.total)
+function generateTable() {
+  let leaderboard = Object.entries(teams).map(([name, stats]) => ({
+    team: name,
+    ...stats
   }));
 
-  // ✅ FIXED SORTING
-  data.sort((a,b)=>{
-    if(b.total!==a.total) return b.total-a.total;
-    if(b.placementPts!==a.placementPts) return b.placementPts-a.placementPts;
-    if(b.killPts!==a.killPts) return b.killPts-a.killPts;
-    return a.name.localeCompare(b.name);
-  });
+  // FIXED SORT: total desc → placement desc → kills desc
+  leaderboard.sort((a, b) => 
+    b.total - a.total || b.placement - a.placement || b.kills - a.kills
+  );
 
-  let html=`<table class="w-full text-sm border">
-    <thead class="bg-black text-white">
+  const tbody = document.getElementById('leaderboardBody');
+  tbody.innerHTML = '';
+  leaderboard.forEach((team, index) => {
+    tbody.innerHTML += `
       <tr>
-        <th class="p-1">Rank</th>
-        <th class="p-1">Team</th>
-        <th class="p-1">Matches</th>
-        <th class="p-1">WWCD</th>
-        <th class="p-1">Placement Pts</th>
-        <th class="p-1">Kill Pts</th>
-        <th class="p-1">Total</th>
+        <td class="rank">${index+1}</td>
+        <td><b>${team.team}</b></td>
+        <td>${team.matches}</td>
+        <td>${team.wwcd}</td>
+        <td>${team.placement}</td>
+        <td>${team.kills}</td>
+        <td>${team.total}</td>
       </tr>
-    </thead><tbody>`;
-  data.forEach((t,i)=>{
-    html+=`<tr class="odd:bg-gray-100">
-      <td class="p-1 text-center">${i+1}</td>
-      <td class="p-1 font-bold">${t.name}</td>
-      <td class="p-1 text-center">${t.matches}</td>
-      <td class="p-1 text-center">${t.wwcd}</td>
-      <td class="p-1 text-center">${t.placementPts}</td>
-      <td class="p-1 text-center">${t.killPts}</td>
-      <td class="p-1 text-center">${t.total}</td>
-    </tr>`;
+    `;
   });
-  html+="</tbody></table>";
-  document.getElementById("leaderboard").innerHTML=html;
 }
 
-function generateTable(){ renderLeaderboard(); }
-function resetAll(){
-  teams={}; matches=0;
-  localStorage.clear();
-  renderInputs(); renderLeaderboard();
+function resetTournament() {
+  teams = {};
+  matchCount = 0;
+  document.getElementById('leaderboardBody').innerHTML = '';
 }
-
-renderInputs(); renderLeaderboard();
 </script>
+
 </body>
 </html>
