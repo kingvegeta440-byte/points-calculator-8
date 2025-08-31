@@ -150,12 +150,13 @@
           <input type="text" id="name${i}" placeholder="Team name" value="${canonicalNames[i]||""}"/>
           <input type="number" id="placement${i}" placeholder="Place" min="1" max="${teamCount}"/>
           <input type="number" id="finishes${i}" placeholder="Finishes" min="0"/>
-          <input type="number" id="impact${i}" placeholder="Impact" min="0" value="0"/>
-          <label><input type="checkbox" id="bounty${i}"/> Bounty</label>
+          <input type="number" id="impact${i}" placeholder="Impact" min="0" value="0" disabled/>
+          <label><input type="checkbox" id="bounty${i}" disabled/> Bounty</label>
         </div>`;
       els.teamsWrap.appendChild(div);
     }
     wireEnterAdvance();
+    updateImpactBountyInputs();
   }
 
   function wireEnterAdvance(){
@@ -165,6 +166,15 @@
         if(e.key==="Enter"){e.preventDefault(); const nxt=inputs[idx+1]; if(nxt) nxt.focus();}
       });
     });
+  }
+
+  function updateImpactBountyInputs(){
+    const enableImpact=els.enableImpact.checked;
+    const enableBounty=els.enableBounty.checked;
+    for(let i=1;i<=teamCount;i++){
+      document.getElementById(`impact${i}`).disabled=!enableImpact;
+      document.getElementById(`bounty${i}`).disabled=!enableBounty;
+    }
   }
 
   function calculateCurrent(){
@@ -182,19 +192,14 @@
       let killPts=(fins-(enableImpact?imp:0))*1 + (enableImpact?imp*IMPACT_MULTIPLIER:0) + (enableBounty&&bounty?10:0);
       let total=placementPts+killPts;
       if(placement||fins||imp||bounty||name!==`Team ${i}`){
-        result.push({name,placement,placementPts,killPts,total});
+        result.push({name,placementPts,killPts,total,placement});
       }
     }
     return result;
   }
 
   function renderLeaderboard(data){
-    data.sort((a,b)=> 
-      b.total - a.total ||
-      b.placementPts - a.placementPts ||
-      b.killPts - a.killPts ||
-      a.name.localeCompare(b.name)
-    );
+    data.sort((a,b)=> b.total-b.total || b.placementPts-a.placementPts || b.killPts-a.killPts);
     els.leaderboardBody.innerHTML=data.map((t,idx)=>{
       let badge="rank-badge"; if(idx===0) badge+=" top1"; else if(idx===1) badge+=" top2"; else if(idx===2) badge+=" top3";
       return `<tr>
@@ -259,6 +264,8 @@
   function init(){
     els.teamCount.value=teamCount;
     els.teamCount.addEventListener("change",()=>{teamCount=parseInt(els.teamCount.value,10); canonicalNames={}; persist(); buildInputs();});
+    els.enableImpact.addEventListener("change",updateImpactBountyInputs);
+    els.enableBounty.addEventListener("change",updateImpactBountyInputs);
     buildInputs();
     renderLeaderboard(Object.entries(standings).map(([n,s])=>({name:n,...s})));
     els.generateBtn.addEventListener("click",()=>{renderLeaderboard(calculateCurrent());});
