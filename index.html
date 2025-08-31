@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <title>BGMI Tournament Points Calculator</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-
   <style>
     :root{
       --bg:#f6f7fb; --card:#ffffff; --ink:#222; --muted:#666;
@@ -16,38 +15,26 @@
     header{padding:22px 16px; text-align:center;}
     header h1{margin:0 0 6px; font-size:24px;}
     header .sub{color:var(--muted); font-size:14px;}
-
     .wrap{max-width:1100px; margin:0 auto; padding:0 16px 40px;}
     .card{background:var(--card); border-radius:14px; box-shadow:0 6px 20px rgba(0,0,0,.06); padding:16px;}
     .row{display:flex; gap:12px; flex-wrap:wrap; align-items:center}
-
     .options{margin:14px 0 18px;}
-    .options label{margin-right:16px; user-select:none;}
-    .options input[type="checkbox"]{transform:translateY(1px)}
-
     .teams-grid{display:grid; grid-template-columns:repeat(2,minmax(280px,1fr)); gap:12px;}
     @media (max-width: 820px){ .teams-grid{grid-template-columns:1fr;} }
-
     .team{background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:10px;}
     .team h3{margin:0 0 6px; font-size:14px; color:var(--muted);}
     .inputs{display:grid; grid-template-columns:1.2fr .8fr .8fr .9fr .7fr; gap:8px; align-items:center}
     .inputs input[type="text"], .inputs input[type="number"]{
       width:100%; padding:8px 10px; border:1px solid #e5e7eb; border-radius:8px; font-size:14px;
     }
-    .inputs input[type="number"]::-webkit-outer-spin-button,
-    .inputs input[type="number"]::-webkit-inner-spin-button{margin:0}
-    .inputs label{display:flex; align-items:center; gap:6px; font-size:13px; color:#374151}
-
     .bar{display:flex; gap:10px; flex-wrap:wrap; margin-top:12px}
     .btn{border:0; border-radius:10px; padding:10px 14px; font-weight:600; cursor:pointer}
     .btn.primary{background:var(--brand); color:var(--brand-ink)}
     .btn.ghost{background:#e5e7eb}
     .btn.ok{background:var(--ok); color:#fff}
     .btn.warn{background:var(--warn); color:#fff}
-
     .error{color:var(--warn); font-size:13px; margin:6px 0 0 2px}
     .muted{color:var(--muted)}
-
     table{width:100%; border-collapse:separate; border-spacing:0; overflow:hidden; border-radius:12px; background:#fff; margin-top:14px}
     thead th{background:#111827; color:#fff; font-weight:600; font-size:14px; padding:10px}
     tbody td{padding:10px; text-align:center; border-bottom:1px solid #f0f2f5; font-size:14px}
@@ -58,7 +45,6 @@
     .top1{background:#f59e0b}
     .top2{background:#9ca3af}
     .top3{background:#b45309}
-
     .panel{display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-top:16px}
     .right{display:flex; gap:10px; align-items:center}
     .select{padding:8px 10px; border:1px solid #e5e7eb; border-radius:8px; background:#fff}
@@ -67,14 +53,13 @@
 <body>
 <header>
   <h1>BGMI Tournament Points Calculator</h1>
-  <div class="sub">Placement + Finishes (Impact optional) + Bounty kills (+10). Add multiple matches; standings auto-save.</div>
+  <div class="sub">Placement + Finishes (Impact optional ×2) + Bounty (+10). Tracks matches played.</div>
 </header>
-
 <div class="wrap">
   <div class="card">
     <div class="panel">
       <div class="row">
-        <label><input type="checkbox" id="enableImpact" /> Enable Impact Player (×3 per impact finish)</label>
+        <label><input type="checkbox" id="enableImpact" /> Enable Impact Player (×2 per impact finish)</label>
         <label><input type="checkbox" id="enableBounty" /> Enable Bounty Points (+10 per bounty kill)</label>
       </div>
       <div class="right">
@@ -87,256 +72,137 @@
         <button class="btn ghost" id="exportPng">Export Leaderboard PNG</button>
       </div>
     </div>
-
-    <div id="error" class="error" aria-live="polite"></div>
-
+    <div id="error" class="error"></div>
     <div id="teams" class="teams-grid"></div>
-
     <div class="bar">
       <button class="btn primary" id="addMatchBtn">➕ Add Match</button>
+      <button class="btn ok" id="generateTableBtn">📊 Generate Points Table</button>
       <button class="btn warn" id="resetBtn">♻ Reset Tournament</button>
-      <span class="muted" id="hint">Tip: Press Enter to jump to the next field. Enter on the last field adds the match.</span>
+      <span class="muted">Tip: Enter moves to next field. Use Add Match button to save.</span>
     </div>
   </div>
-
   <div class="card" id="leaderboardCard">
-    <h2 style="margin:0 0 10px">🏆 Leaderboard</h2>
-    <table id="leaderboard">
+    <h2 style="margin:0 0 10px">🏆 Leaderboard <span id="matchCount"></span></h2>
+    <table>
       <thead>
-        <tr>
-          <th>Rank</th>
-          <th>Team Name</th>
-          <th>Total Points</th>
-        </tr>
+        <tr><th>Rank</th><th>Team</th><th>Total Points</th></tr>
       </thead>
       <tbody id="leaderboardBody"></tbody>
     </table>
   </div>
 </div>
-
-<!-- html2canvas for PNG export -->
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" defer></script>
-
 <script>
 (() => {
-  // ====== CONFIG ======
-  const DEFAULT_TEAMS = 24;
-  const IMPACT_MULTIPLIER = 3; // set to 2 if your rules are "double"
-  // Placement points per your original rule (8+ get 0)
-  function placementPoints(place){
-    if(place === 1) return 10;
-    if(place === 2) return 6;
-    if(place === 3) return 5;
-    if(place === 4) return 4;
-    if(place === 5) return 3;
-    if(place === 6) return 2;
-    if(place === 7) return 1;
-    return 0;
-  }
-
-  // ====== STATE (with persistence) ======
-  let standings = JSON.parse(localStorage.getItem("standings") || "{}");       // { teamName: totalPoints }
-  let canonicalNames = JSON.parse(localStorage.getItem("canonicalNames") || "{}"); // { slotIndex: teamName }
-  let teamCount = parseInt(localStorage.getItem("teamCount") || DEFAULT_TEAMS, 10);
-
-  const els = {
-    enableImpact: document.getElementById("enableImpact"),
-    enableBounty: document.getElementById("enableBounty"),
-    teamCount:    document.getElementById("teamCount"),
-    teamsWrap:    document.getElementById("teams"),
-    error:        document.getElementById("error"),
-    addMatchBtn:  document.getElementById("addMatchBtn"),
-    resetBtn:     document.getElementById("resetBtn"),
-    exportPng:    document.getElementById("exportPng"),
-    leaderboardBody: document.getElementById("leaderboardBody"),
-    leaderboardCard: document.getElementById("leaderboardCard"),
+  const DEFAULT_TEAMS=24;
+  const IMPACT_MULTIPLIER=2; // fixed to 2x
+  function placementPoints(p){return [10,6,5,4,3,2,1][p-1]||0;}
+  let standings=JSON.parse(localStorage.getItem("standings")||"{}");
+  let canonicalNames=JSON.parse(localStorage.getItem("canonicalNames")||"{}");
+  let teamCount=parseInt(localStorage.getItem("teamCount")||DEFAULT_TEAMS,10);
+  let matchesPlayed=parseInt(localStorage.getItem("matchesPlayed")||"0",10);
+  const els={
+    enableImpact:document.getElementById("enableImpact"),
+    enableBounty:document.getElementById("enableBounty"),
+    teamCount:document.getElementById("teamCount"),
+    teamsWrap:document.getElementById("teams"),
+    error:document.getElementById("error"),
+    addMatchBtn:document.getElementById("addMatchBtn"),
+    generateTableBtn:document.getElementById("generateTableBtn"),
+    resetBtn:document.getElementById("resetBtn"),
+    exportPng:document.getElementById("exportPng"),
+    leaderboardBody:document.getElementById("leaderboardBody"),
+    matchCount:document.getElementById("matchCount")
   };
-
-  // ====== BUILD TEAM INPUTS ======
   function buildInputs(){
-    els.teamsWrap.innerHTML = "";
-    const n = teamCount;
-    for(let i=1;i<=n;i++){
-      const team = document.createElement("div");
-      team.className = "team";
-      team.innerHTML = `
-        <h3>Team ${i}</h3>
-        <div class="inputs">
-          <input type="text"   id="name${i}"      placeholder="Team name" value="${(canonicalNames[i]||"")}" />
-          <input type="number" id="placement${i}" placeholder="Place" min="1" max="${n}" />
-          <input type="number" id="finishes${i}"  placeholder="Finishes" min="0" />
-          <input type="number" id="impact${i}"    placeholder="Impact"   min="0" value="0" />
-          <label title="Check if this team killed the bounty team">
-            <input type="checkbox" id="bounty${i}" /> Bounty
-          </label>
-        </div>
-      `;
-      els.teamsWrap.appendChild(team);
+    els.teamsWrap.innerHTML="";
+    for(let i=1;i<=teamCount;i++){
+      const t=document.createElement("div");t.className="team";
+      t.innerHTML=`<h3>Team ${i}</h3>
+      <div class="inputs">
+        <input type="text" id="name${i}" placeholder="Team name" value="${canonicalNames[i]||""}" />
+        <input type="number" id="placement${i}" placeholder="Place" min="1" max="${teamCount}" />
+        <input type="number" id="finishes${i}" placeholder="Finishes" min="0" />
+        <input type="number" id="impact${i}" placeholder="Impact" min="0" value="0" />
+        <label><input type="checkbox" id="bounty${i}" /> Bounty</label>
+      </div>`;
+      els.teamsWrap.appendChild(t);
     }
     wireEnterAdvance();
   }
-
-  // ====== ENTER KEY NAVIGATION ======
   function wireEnterAdvance(){
-    const inputs = els.teamsWrap.querySelectorAll('input');
-    inputs.forEach((el, idx) => {
-      el.addEventListener('keydown', (e) => {
-        if(e.key === 'Enter'){
-          e.preventDefault();
-          const next = inputs[idx+1];
-          if(next){ next.focus(); }
-          else { addMatch(); } // last input -> add match
-        }
+    const inputs=els.teamsWrap.querySelectorAll('input');
+    inputs.forEach((el,idx)=>{
+      el.addEventListener('keydown',e=>{
+        if(e.key==="Enter"){e.preventDefault(); if(inputs[idx+1])inputs[idx+1].focus();}
       });
     });
   }
-
-  // ====== NAME DEDUP (only on first time a slot is added) ======
-  function uniqueName(base, taken){
-    if(!taken.includes(base)) return base;
-    let k = 2;
-    while(taken.includes(`${base} (${k})`)) k++;
-    return `${base} (${k})`;
-  }
-
-  // ====== ADD MATCH ======
+  function uniqueName(base,taken){if(!taken.includes(base))return base;let k=2;while(taken.includes(`${base} (${k})`))k++;return`${base} (${k})`;}
   function addMatch(){
-    els.error.textContent = "";
-    const enableImpact = els.enableImpact.checked;
-    const enableBounty = els.enableBounty.checked;
-
-    const n = teamCount;
-    const taken = Object.keys(standings);
-
-    for(let i=1;i<=n;i++){
-      let desiredName = (document.getElementById(`name${i}`).value || `Team ${i}`).trim();
-      let placeVal    = document.getElementById(`placement${i}`).value;
-      let finsVal     = document.getElementById(`finishes${i}`).value;
-      let impVal      = document.getElementById(`impact${i}`).value;
-      let bounty      = document.getElementById(`bounty${i}`).checked;
-
-      // Skip completely empty rows (no name typed AND no numbers AND no bounty)
-      const emptyNumbers = (placeVal==="" && finsVal==="" && impVal==="");
-      const defaultName  = (desiredName===`Team ${i}` && !canonicalNames[i]);
-      if(emptyNumbers && !bounty && defaultName) continue;
-
-      // Parse & basic validation
-      let placement = parseInt(placeVal || "0", 10);
-      let finishes  = parseInt(finsVal  || "0", 10);
-      let impactF   = parseInt(impVal   || "0", 10);
-
-      if(placement < 0 || finishes < 0 || impactF < 0){
-        els.error.textContent = "Values cannot be negative.";
-        return;
+    els.error.textContent="";
+    const enableImpact=els.enableImpact.checked, enableBounty=els.enableBounty.checked;
+    const taken=Object.keys(standings);
+    let added=false;
+    for(let i=1;i<=teamCount;i++){
+      let name=(document.getElementById(`name${i}`).value||`Team ${i}`).trim();
+      let p=parseInt(document.getElementById(`placement${i}`).value||"0");
+      let f=parseInt(document.getElementById(`finishes${i}`).value||"0");
+      let imp=parseInt(document.getElementById(`impact${i}`).value||"0");
+      let bounty=document.getElementById(`bounty${i}`).checked;
+      if(p<0||f<0||imp<0){els.error.textContent="Values cannot be negative.";return;}
+      if(p>teamCount){els.error.textContent=`Placement > ${teamCount}`;return;}
+      if(imp>f)imp=f;
+      if(!canonicalNames[i]){canonicalNames[i]=uniqueName(name,taken);taken.push(canonicalNames[i]);}
+      const team=canonicalNames[i];
+      if(p||f||imp||bounty){ // count only filled rows
+        const total=placementPoints(p)+(f-(enableImpact?imp:0))*1+(enableImpact?imp*IMPACT_MULTIPLIER:0)+(enableBounty&&bounty?10:0);
+        standings[team]=(standings[team]||0)+total; added=true;
       }
-      if(placement > n){
-        els.error.textContent = `Placement cannot be greater than number of teams (${n}).`;
-        return;
-      }
-      if(impactF > finishes) impactF = finishes;
-
-      // Canonical name per slot (prevents “(2)(2)” growth across matches)
-      if(!canonicalNames[i]){
-        const unique = uniqueName(desiredName, taken);
-        canonicalNames[i] = unique;
-        document.getElementById(`name${i}`).value = unique; // show the canonical back to user
-        taken.push(unique);
-      }
-      const name = canonicalNames[i];
-
-      // Points calc
-      const placementPts = placementPoints(placement);
-      const finishPts    = (finishes - (enableImpact ? impactF : 0)) * 1;
-      const impactPts    = enableImpact ? impactF * IMPACT_MULTIPLIER : 0;
-      const bountyPts    = (enableBounty && bounty) ? 10 : 0;
-
-      const total = placementPts + finishPts + impactPts + bountyPts;
-
-      if(!standings[name]) standings[name] = 0;
-      standings[name] += total;
     }
-
-    persist();
-    renderLeaderboard();
+    if(added){matchesPlayed++;persist();}
+    clearInputs();
   }
-
-  // ====== RENDER LEADERBOARD ======
+  function clearInputs(){
+    for(let i=1;i<=teamCount;i++){
+      document.getElementById(`placement${i}`).value="";
+      document.getElementById(`finishes${i}`).value="";
+      document.getElementById(`impact${i}`).value="0";
+      document.getElementById(`bounty${i}`).checked=false;
+    }
+  }
   function renderLeaderboard(){
-    const rows = Object.entries(standings).sort((a,b)=> b[1]-a[1]);
-    els.leaderboardBody.innerHTML = rows.map(([team,pts], idx) => {
-      let badge = "rank-badge";
-      if(idx===0) badge += " top1";
-      else if(idx===1) badge += " top2";
-      else if(idx===2) badge += " top3";
-      return `<tr>
-        <td><span class="${badge}">${idx+1}</span></td>
-        <td style="text-align:left">${team}</td>
-        <td style="font-variant-numeric:tabular-nums">${pts}</td>
-      </tr>`;
+    const rows=Object.entries(standings).sort((a,b)=>b[1]-a[1]);
+    els.leaderboardBody.innerHTML=rows.map(([t,pts],i)=>{
+      let badge="rank-badge";if(i===0)badge+=" top1";else if(i===1)badge+=" top2";else if(i===2)badge+=" top3";
+      return `<tr><td><span class="${badge}">${i+1}</span></td><td style="text-align:left">${t}</td><td>${pts}</td></tr>`;
     }).join("");
+    els.matchCount.textContent=`(Matches: ${matchesPlayed})`;
   }
-
-  // ====== RESET ======
   function resetTournament(){
-    if(!confirm("Reset tournament? This clears standings and inputs.")) return;
-    standings = {};
-    canonicalNames = {};
-    persist();
-
-    // Clear inputs
-    const n = teamCount;
-    for(let i=1;i<=n;i++){
-      document.getElementById(`name${i}`).value = "";
-      document.getElementById(`placement${i}`).value = "";
-      document.getElementById(`finishes${i}`).value = "";
-      document.getElementById(`impact${i}`).value = "0";
-      document.getElementById(`bounty${i}`).checked = false;
-    }
-    renderLeaderboard();
+    if(!confirm("Reset tournament?"))return;
+    standings={};canonicalNames={};matchesPlayed=0;persist();buildInputs();renderLeaderboard();
   }
-
-  // ====== PERSIST ======
   function persist(){
-    localStorage.setItem("standings", JSON.stringify(standings));
-    localStorage.setItem("canonicalNames", JSON.stringify(canonicalNames));
-    localStorage.setItem("teamCount", String(teamCount));
+    localStorage.setItem("standings",JSON.stringify(standings));
+    localStorage.setItem("canonicalNames",JSON.stringify(canonicalNames));
+    localStorage.setItem("teamCount",teamCount);
+    localStorage.setItem("matchesPlayed",matchesPlayed);
   }
-
-  // ====== EXPORT PNG ======
   async function exportPng(){
-    if(!window.html2canvas){
-      alert("Export library not loaded yet. Please try again in a second.");
-      return;
-    }
-    const node = document.getElementById("leaderboardCard");
-    const canvas = await html2canvas(node, {scale:2, backgroundColor:"#ffffff"});
-    const url = canvas.toDataURL("image/png");
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "bgmi_leaderboard.png";
-    a.click();
+    if(!window.html2canvas){alert("Wait...");return;}
+    const canvas=await html2canvas(document.getElementById("leaderboardCard"),{scale:2,backgroundColor:"#fff"});
+    const a=document.createElement("a");a.href=canvas.toDataURL("image/png");a.download="bgmi_leaderboard.png";a.click();
   }
-
-  // ====== INIT ======
   function init(){
-    // hydrate teamCount select
-    els.teamCount.value = String(teamCount);
-    els.teamCount.addEventListener("change", () => {
-      teamCount = parseInt(els.teamCount.value,10);
-      // Rebuild inputs; keep standings but clear canonical names so uniqueness is re-applied
-      canonicalNames = {};
-      persist();
-      buildInputs();
-    });
-
-    buildInputs();
-    renderLeaderboard();
-
-    els.addMatchBtn.addEventListener("click", addMatch);
-    els.resetBtn.addEventListener("click", resetTournament);
-    els.exportPng.addEventListener("click", exportPng);
+    els.teamCount.value=teamCount;
+    els.teamCount.addEventListener("change",()=>{teamCount=parseInt(els.teamCount.value,10);canonicalNames={};persist();buildInputs();});
+    buildInputs();renderLeaderboard();
+    els.addMatchBtn.addEventListener("click",addMatch);
+    els.generateTableBtn.addEventListener("click",renderLeaderboard);
+    els.resetBtn.addEventListener("click",resetTournament);
+    els.exportPng.addEventListener("click",exportPng);
   }
-
   init();
 })();
 </script>
