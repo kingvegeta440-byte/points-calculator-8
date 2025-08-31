@@ -1,202 +1,249 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>BGMI Tournament Points Calculator</title>
+  <meta charset="UTF-8" />
+  <title>Tournament Points Table</title>
   <style>
-    body{font-family:Arial,sans-serif;background:#f4f6f8;margin:0;padding:0}
-    header{background:#1e293b;color:#fff;padding:15px;text-align:center;font-size:20px;font-weight:bold;border-bottom:4px solid #3b82f6}
-    main{padding:20px;max-width:1200px;margin:auto}
-    section{background:#fff;border-radius:10px;padding:20px;margin-bottom:20px;box-shadow:0 2px 6px rgba(0,0,0,0.1)}
-    h2{margin-top:0;border-bottom:2px solid #e5e7eb;padding-bottom:10px;color:#1e293b}
-    .controls{margin-bottom:15px}
-    .controls label{margin-right:10px}
-    table{width:100%;border-collapse:collapse;margin-top:10px}
-    th,td{border:1px solid #e5e7eb;padding:8px;text-align:center}
-    th{background:#1e293b;color:#fff}
-    tr:nth-child(even){background:#f9fafb}
-    .btn{padding:8px 15px;border:none;border-radius:6px;cursor:pointer;font-weight:bold}
-    .btn-primary{background:#3b82f6;color:#fff}
-    .btn-success{background:#22c55e;color:#fff}
-    .btn-danger{background:#ef4444;color:#fff}
-    .leaderboard{margin-top:20px}
-    .rank-badge{display:inline-block;padding:5px 10px;border-radius:50%;background:#1e293b;color:#fff;font-weight:bold}
-    .top1{background:#facc15;color:#000}
-    .top2{background:#9ca3af}
-    .top3{background:#f97316}
-    .flex{display:flex;gap:10px;flex-wrap:wrap}
-    input[type="number"]{width:70px}
-    input[type="text"]{width:150px}
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+    }
+    .controls {
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .controls label {
+      margin: 0 10px;
+    }
+    .team-row {
+      display: grid;
+      grid-template-columns: 120px 80px 80px 80px 60px;
+      gap: 5px;
+      margin-bottom: 5px;
+    }
+    .team-row input[type="text"],
+    .team-row input[type="number"] {
+      width: 100%;
+      padding: 5px;
+      box-sizing: border-box;
+    }
+    .team-row input[type="checkbox"] {
+      margin: auto;
+      transform: scale(1.2);
+    }
+    .buttons {
+      margin: 20px 0;
+      text-align: center;
+    }
+    button {
+      padding: 10px 15px;
+      margin: 0 5px;
+      font-weight: bold;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .btn-generate { background: #007bff; color: #fff; }
+    .btn-add { background: #28a745; color: #fff; }
+    .btn-reset { background: #dc3545; color: #fff; }
+    .leaderboard {
+      margin-top: 30px;
+      background: #fff;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+    }
+    th, td {
+      padding: 8px;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background: #222;
+      color: #fff;
+    }
+    tr:nth-child(even) { background: #f9f9f9; }
   </style>
 </head>
 <body>
-<header>BGMI Tournament Points Calculator</header>
-<main>
-  <section>
-    <h2>Match Input</h2>
-    <div class="controls">
-      <label>Number of Teams:
-        <select id="teamCount">
-          <option>16</option>
-          <option>24</option>
-        </select>
-      </label>
-      <label>
-        <input type="checkbox" id="impactToggle"> Enable Impact Finishes (x2)
-      </label>
-      <label>
-        <input type="checkbox" id="bountyToggle"> Enable Bounty (+10)
-      </label>
-    </div>
-    <div id="teamsContainer"></div>
-    <div style="margin-top:15px" class="flex">
-      <button class="btn btn-primary" id="generate">Generate Points Table</button>
-      <button class="btn btn-success" id="addMatch">Add Match</button>
-      <button class="btn btn-danger" id="reset">Reset Tournament</button>
-    </div>
-  </section>
+  <h1>Points Table Generator</h1>
 
-  <section class="leaderboard">
-    <h2>🏆 Leaderboard <span id="matchCount"></span></h2>
-    <table>
+  <div class="controls">
+    <label><input type="checkbox" id="impactToggle"> Enable Impact Bonus</label>
+    <label><input type="checkbox" id="bountyToggle"> Enable Bounty Bonus</label>
+  </div>
+
+  <div id="teamsContainer"></div>
+
+  <div class="buttons">
+    <button id="generate" class="btn-generate">Generate Points Table</button>
+    <button id="addMatch" class="btn-add">Add Match</button>
+    <button id="reset" class="btn-reset">Reset Tournament</button>
+  </div>
+
+  <div class="leaderboard">
+    <h2>🏆 Leaderboard</h2>
+    <table id="leaderboardTable">
       <thead>
         <tr>
-          <th>Rank</th><th>Team</th><th>Placement Pts</th><th>Kill Pts</th><th>Total</th>
+          <th>Rank</th>
+          <th>Team</th>
+          <th>Placement Pts</th>
+          <th>Kill Pts</th>
+          <th>Total</th>
         </tr>
       </thead>
-      <tbody id="leaderboardBody"></tbody>
+      <tbody></tbody>
     </table>
-  </section>
-</main>
+  </div>
 
 <script>
+const placementPoints = [10,6,5,4,3,2,1,1]; // 1st–8th; 9th–16th get 0
+const teamCount = 16;
+
 const els = {
-  teamCount: document.getElementById("teamCount"),
-  impactToggle: document.getElementById("impactToggle"),
-  bountyToggle: document.getElementById("bountyToggle"),
   teamsContainer: document.getElementById("teamsContainer"),
   generate: document.getElementById("generate"),
   addMatch: document.getElementById("addMatch"),
   reset: document.getElementById("reset"),
-  leaderboardBody: document.getElementById("leaderboardBody"),
-  matchCount: document.getElementById("matchCount")
+  leaderboardTable: document.getElementById("leaderboardTable").querySelector("tbody"),
+  impactToggle: document.getElementById("impactToggle"),
+  bountyToggle: document.getElementById("bountyToggle")
 };
-
-// Correct BGMI Placement Points
-const placementPoints = [10,6,5,4,3,2,1,1]; // 1st–8th, 9–16th = 0
 
 let standings = {};
 let matchesPlayed = 0;
 let canonicalNames = [];
 
-// Build team input fields
-function buildTeamInputs(){
-  els.teamsContainer.innerHTML="";
-  const n=parseInt(els.teamCount.value);
-  for(let i=0;i<n;i++){
-    const row=document.createElement("div");
-    row.className="flex";
-    row.innerHTML=`
-      <input type="text" placeholder="Team ${i+1}" class="teamName">
-      <input type="number" min="1" max="${n}" placeholder="Place" class="placement">
-      <input type="number" min="0" placeholder="Finishes" class="finishes">
-      <input type="number" min="0" placeholder="Impact" class="impact">
-      <label><input type="checkbox" class="bounty"> Bounty</label>
-    `;
-    els.teamsContainer.appendChild(row);
-  }
+// build team input rows
+for (let i = 0; i < teamCount; i++) {
+  const row = document.createElement("div");
+  row.className = "team-row";
+  row.innerHTML = `
+    <input type="text" class="teamName" placeholder="Team ${i+1}" />
+    <input type="number" class="placement" placeholder="Place" min="0" max="24" />
+    <input type="number" class="finishes" placeholder="Kills" min="0" />
+    <input type="number" class="impact" placeholder="Impact" min="0" />
+    <input type="checkbox" class="bounty" title="Bounty?" />
+  `;
+  els.teamsContainer.appendChild(row);
 }
-buildTeamInputs();
-els.teamCount.addEventListener("change", buildTeamInputs);
 
-// Calculate current match data
+function esc(str){
+  str = String(str || "");
+  return str.replace(/[&<>"']/g, s => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[s]));
+}
+
 function calculateCurrent(){
-  const rows=[...els.teamsContainer.children];
-  return rows.map((row,idx)=>{
-    const name=row.querySelector(".teamName").value.trim()||`Team${idx+1}`;
-    const placement=parseInt(row.querySelector(".placement").value)||0;
-    const finishes=parseInt(row.querySelector(".finishes").value)||0;
-    const impact=parseInt(row.querySelector(".impact").value)||0;
-    const bounty=row.querySelector(".bounty").checked;
+  const rows = [...els.teamsContainer.children];
+  return rows.map((row, idx) => {
+    const name = (row.querySelector(".teamName").value || `Team ${idx+1}`).trim();
+    const placement = Number.parseInt(row.querySelector(".placement").value || "0", 10) || 0;
+    const finishes = Math.max(0, Number.parseInt(row.querySelector(".finishes").value || "0", 10) || 0);
+    let impact = Math.max(0, Number.parseInt(row.querySelector(".impact").value || "0", 10) || 0);
+    const bounty = !!row.querySelector(".bounty").checked;
 
-    let placementPts=0;
-    if(placement>=1 && placement<=8){
-      placementPts=placementPoints[placement-1];
-    } else if(placement>=9 && placement<=16){
-      placementPts=0;
+    if (impact > finishes) impact = finishes;
+
+    let placementPts = 0;
+    if (placement >= 1 && placement <= placementPoints.length) {
+      placementPts = placementPoints[placement-1];
+    } else {
+      placementPts = 0;
     }
 
-    let killPts=finishes;
-    if(els.impactToggle.checked) killPts+=impact*2;
-    else killPts+=impact;
-    if(els.bountyToggle.checked && bounty) killPts+=10;
+    let killPts = finishes + (els.impactToggle.checked ? impact : 0);
 
-    return { name, placementPts, killPts, total: placementPts+killPts };
+    if (els.bountyToggle.checked && bounty) killPts += 10;
+
+    return { slot: idx, name, placementPts, killPts, total: placementPts + killPts };
   });
 }
 
-// Escape HTML
-function esc(str){
-  return str.replace(/[&<>"']/g, s=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[s]));
-}
-
-// Render leaderboard
 function renderLeaderboard(data){
-  data.sort((a,b)=>
-    b.total-a.total ||
-    b.placementPts-a.placementPts ||
-    b.killPts-a.killPts ||
-    a.name.localeCompare(b.name)
-  );
-  els.leaderboardBody.innerHTML=data.map((t,idx)=>{
-    let badge="rank-badge";
-    if(idx===0) badge+=" top1";
-    else if(idx===1) badge+=" top2";
-    else if(idx===2) badge+=" top3";
-    return `<tr>
-      <td><span class="${badge}">${idx+1}</span></td>
-      <td style="text-align:left">${esc(t.name)}</td>
+  data.sort((a,b) => b.total - a.total || b.killPts - a.killPts || b.placementPts - a.placementPts || a.name.localeCompare(b.name));
+  els.leaderboardTable.innerHTML = data.map((t,i)=>`
+    <tr>
+      <td>${i+1}</td>
+      <td>${esc(t.name)}</td>
       <td>${t.placementPts}</td>
       <td>${t.killPts}</td>
       <td>${t.total}</td>
-    </tr>`;
-  }).join("");
-  els.matchCount.textContent=matchesPlayed>0?`(Matches: ${matchesPlayed})`:"";
+    </tr>
+  `).join("");
 }
 
-// Buttons
-els.generate.addEventListener("click",()=>{
-  const cur=calculateCurrent();
-  renderLeaderboard(cur);
+// Generate leaderboard from current match only
+els.generate.addEventListener("click", () => {
+  const data = calculateCurrent();
+  renderLeaderboard(data);
 });
 
-// Add Match (cumulative)
-els.addMatch.addEventListener("click",()=>{
-  const cur=calculateCurrent();
-  if(matchesPlayed===0){
-    canonicalNames=cur.map(t=>t.name);
-  }
-  cur.forEach((t,i)=>{
-    const cname=canonicalNames[i]||t.name;
-    if(!standings[cname]) standings[cname]={placementPts:0,killPts:0,total:0};
-    standings[cname].placementPts+=t.placementPts;
-    standings[cname].killPts+=t.killPts;
-    standings[cname].total+=t.total;
+// Add match to tournament standings
+els.addMatch.addEventListener("click", () => {
+  const cur = calculateCurrent();
+  if (matchesPlayed === 0) canonicalNames = cur.map(t => t.name || `Team ${t.slot+1}`);
+  
+  cur.forEach(t => {
+    const cname = canonicalNames[t.slot] || t.name;
+    if (!standings[cname]) standings[cname] = { placementPts:0, killPts:0, total:0 };
+    standings[cname].placementPts += Number(t.placementPts) || 0;
+    standings[cname].killPts += Number(t.killPts) || 0;
+    standings[cname].total += Number(t.total) || 0;
   });
+
   matchesPlayed++;
-  const data=Object.keys(standings).map(name=>({name, ...standings[name]}));
+  const data = Object.keys(standings).map(name => ({ name, ...standings[name] }));
   renderLeaderboard(data);
 });
 
 // Reset
-els.reset.addEventListener("click",()=>{
-  if(!confirm("Reset tournament?")) return;
-  standings={};
-  matchesPlayed=0;
-  canonicalNames=[];
-  buildTeamInputs();
-  els.leaderboardBody.innerHTML="";
-  els.matchCount.textContent="";
+els.reset.addEventListener("click", () => {
+  standings = {};
+  matchesPlayed = 0;
+  canonicalNames = [];
+  [...els.teamsContainer.children].forEach((row,i) => {
+    row.querySelector(".teamName").value = "";
+    row.querySelector(".placement").value = "";
+    row.querySelector(".finishes").value = "";
+    row.querySelector(".impact").value = "";
+    row.querySelector(".bounty").checked = false;
+  });
+  els.impactToggle.checked = false;
+  els.bountyToggle.checked = false;
+  els.leaderboardTable.innerHTML = "";
+});
+
+// Allow Enter to jump to next input instead of clicking
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    const formInputs = [
+      ...document.querySelectorAll(
+        "#teamsContainer input[type='text'], " +
+        "#teamsContainer input[type='number'], " +
+        "#teamsContainer input[type='checkbox']"
+      )
+    ];
+    const idx = formInputs.indexOf(document.activeElement);
+    if (idx > -1) {
+      e.preventDefault();
+      let nextIdx = idx + 1;
+      if (nextIdx < formInputs.length) {
+        formInputs[nextIdx].focus();
+        if (formInputs[nextIdx].type !== "checkbox") {
+          formInputs[nextIdx].select();
+        }
+      }
+    }
+  }
 });
 </script>
 </body>
