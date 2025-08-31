@@ -187,7 +187,13 @@
   }
 
   function renderLeaderboard(data){
-    data.sort((a,b)=> b.total-b.total || b.placementPts-a.placementPts);
+    // ✅ Fixed ranking bug: now sorts by total, then placementPts, then killPts, then name
+    data.sort((a,b)=> 
+      b.total - a.total ||
+      b.placementPts - a.placementPts ||
+      b.killPts - a.killPts ||
+      a.name.localeCompare(b.name)
+    );
     els.leaderboardBody.innerHTML=data.map((t,idx)=>{
       let badge="rank-badge"; if(idx===0) badge+=" top1"; else if(idx===1) badge+=" top2"; else if(idx===2) badge+=" top3";
       return `<tr>
