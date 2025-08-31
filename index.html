@@ -91,6 +91,8 @@
         <tr>
           <th>Rank</th>
           <th>Team</th>
+          <th>Matches</th>
+          <th>WWCD</th>
           <th>Placement Pts</th>
           <th>Kill Pts</th>
           <th>Total</th>
@@ -180,14 +182,13 @@
       let killPts=(fins-(enableImpact?imp:0))*1 + (enableImpact?imp*IMPACT_MULTIPLIER:0) + (enableBounty&&bounty?10:0);
       let total=placementPts+killPts;
       if(placement||fins||imp||bounty||name!==`Team ${i}`){
-        result.push({name,placementPts,killPts,total});
+        result.push({name,placement,placementPts,killPts,total});
       }
     }
     return result;
   }
 
   function renderLeaderboard(data){
-    // ✅ Fixed ranking bug: now sorts by total, then placementPts, then killPts, then name
     data.sort((a,b)=> 
       b.total - a.total ||
       b.placementPts - a.placementPts ||
@@ -199,6 +200,8 @@
       return `<tr>
         <td><span class="${badge}">${idx+1}</span></td>
         <td style="text-align:left">${t.name}</td>
+        <td>${t.matches||0}</td>
+        <td>${t.wwcd||0}</td>
         <td>${t.placementPts}</td>
         <td>${t.killPts}</td>
         <td>${t.total}</td>
@@ -221,10 +224,12 @@
       let slot=canonicalNames[i];
       const team=cur.find(t=>t.name===desired);
       if(team){
-        if(!standings[slot]) standings[slot]={placementPts:0,killPts:0,total:0};
+        if(!standings[slot]) standings[slot]={placementPts:0,killPts:0,total:0,matches:0,wwcd:0};
         standings[slot].placementPts+=team.placementPts;
         standings[slot].killPts+=team.killPts;
         standings[slot].total+=team.total;
+        standings[slot].matches+=1;
+        if(team.placement===1) standings[slot].wwcd+=1;
       }
     }
     matchesPlayed++;
